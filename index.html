@@ -339,7 +339,7 @@ function startSession(){
   if(S.opts.shuffle) for(var i=qs.length-1;i>0;i--){ var j = Math.floor(Math.random()*(i+1)); var t = qs[i]; qs[i] = qs[j]; qs[j] = t; }
   if(S.opts.count > 0) qs = qs.slice(0, S.opts.count);
 
-  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }).then(function(stream){
+  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } }).then(function(stream){
     var mime = "";
     var prefs = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"];
     for(var k=0;k<prefs.length;k++){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(prefs[k])){ mime = prefs[k]; break; } }
