@@ -621,7 +621,8 @@ function viewArchive(){
         })));
       }
       kids.push(el("div", { class: "row" }, [
-        el("button", { class: "btn-primary grow btn-sm", text: "폰에 저장", onclick: function(){ saveToPhone(r); } }),
+        el("button", { class: "btn-primary grow btn-sm", text: "공유 (카톡 등)", onclick: function(){ shareRec(r); } }),
+        el("button", { class: "btn-sm", text: "폰에 저장", onclick: function(){ saveToPhone(r); } }),
         el("button", { class: "btn-danger btn-sm", text: "삭제", onclick: function(){
           if(!confirm("이 녹음을 지울까요? 되돌릴 수 없습니다.")) return;
           tx("readwrite", function(st){ st.delete(r.id); }).then(loadRecs).then(function(){ S.openRec = null; render(); });
@@ -642,13 +643,30 @@ function viewArchive(){
   ];
 }
 
+function recFile(r){
+  try { return new File([r.blob], r.name, { type: r.blob.type || "audio/mp4" }); }
+  catch(e){ return null; }
+}
+function shareRec(r){
+  var f = recFile(r);
+  if(!f || !navigator.share){ toast("이 브라우저는 공유를 지원하지 않습니다", true); return; }
+  if(navigator.canShare && !navigator.canShare({ files: [f] })){ toast("이 파일은 공유할 수 없습니다", true); return; }
+  navigator.share({ files: [f], title: r.name }).then(function(){}, function(e){
+    if(e && e.name === "AbortError") return;
+    toast("공유하지 못했습니다: " + ((e && e.message) || "알 수 없음"), true);
+  });
+}
 function saveToPhone(r){
-  var url = URL.createObjectURL(r.blob);
-  var a = document.createElement("a");
-  a.href = url; a.download = r.name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
-  toast("다운로드 폴더에 저장했습니다");
+  try {
+    var url = URL.createObjectURL(r.blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = r.name; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 15000);
+    toast("저장을 시작했습니다. 다운로드 알림을 확인하세요");
+  } catch(e){
+    toast("저장 실패: " + ((e && e.message) || "알 수 없음") + " — [공유]를 써보세요", true);
+  }
 }
 
 /* ---------- 렌더 ---------- */
