@@ -375,6 +375,8 @@ function micTest(){
   var line = el("div", { class: "foot", text: "마이크 여는 중…" });
   out.appendChild(line);
   openMic().then(function(stream){
+   try {
+    var amp = boost(stream, S.opts.gain);
     var AC = window.AudioContext || window.webkitAudioContext;
     var ctx = new AC();
     if(ctx.state === "suspended" && ctx.resume) ctx.resume();
@@ -383,7 +385,6 @@ function micTest(){
     var buf = new Float32Array(an.fftSize), peak = 0, sum = 0, n = 0;
     var mime = "";
     PREFS.forEach(function(m){ if(!mime && window.MediaRecorder && MediaRecorder.isTypeSupported(m)) mime = m; });
-    var amp = boost(stream, S.opts.gain);
     var mr = new MediaRecorder(amp.stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : {});
     var chunks = [];
     mr.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
@@ -412,6 +413,10 @@ function micTest(){
     };
     mr.start();
     setTimeout(function(){ if(mr.state !== "inactive") mr.stop(); }, 10000);
+   } catch(err){
+    stream.getTracks().forEach(function(t){ t.stop(); });
+    line.textContent = "테스트 중 오류: " + ((err && err.message) || err);
+   }
   }, function(e){
     line.textContent = "마이크 실패 [" + ((e && e.name) || "?") + "] " + ((e && e.message) || "");
   });
@@ -437,6 +442,7 @@ function startSession(){
   if(S.opts.count > 0) qs = qs.slice(0, S.opts.count);
 
   openMic().then(function(stream){
+   try {
     var mime = "";
     for(var k=0;k<PREFS.length;k++){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(PREFS[k])){ mime = PREFS[k]; break; } }
     var amp = boost(stream, S.opts.gain);
@@ -456,6 +462,12 @@ function startSession(){
     S.view = "session";
     tick();
     next();
+   } catch(err){
+    stream.getTracks().forEach(function(t){ t.stop(); });
+    S.ses = null;
+    toast("녹음 시작 실패: " + ((err && err.message) || err), true);
+    render();
+   }
   }).catch(function(e){
     var n = (e && e.name) || "알 수 없음";
     var why = n === "NotAllowedError" ? "권한이 거부됐습니다 (자물쇠 → 권한 → 마이크 허용)"
