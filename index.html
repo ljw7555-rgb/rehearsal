@@ -294,17 +294,32 @@ function pickVoice(){
   return null;
 }
 if(window.speechSynthesis) speechSynthesis.onvoiceschanged = function(){ pickVoice(); };
-function speak(text){
+function speak(text, retry){
   if(!window.speechSynthesis) return;
   speechSynthesis.cancel();
   var u = new SpeechSynthesisUtterance(text);
   u.lang = "ko-KR"; u.rate = 0.96;
   var v = pickVoice(); if(v) u.voice = v;
   speechSynthesis.speak(u);
+  speechSynthesis.resume();
+  if(!retry) setTimeout(function(){
+    if(!speechSynthesis.speaking && !speechSynthesis.pending) speak(text, true);
+  }, 350);
 }
 
 /* ---------- 연습 세션 ---------- */
+function primeTTS(){
+  if(!window.speechSynthesis) return;
+  try {
+    speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(" ");
+    u.volume = 0; u.lang = "ko-KR";
+    speechSynthesis.speak(u);
+    speechSynthesis.resume();
+  } catch(e){}
+}
 function startSession(){
+  primeTTS();
   var set = setById(S.setId);
   if(!set || !set.questions.length) return;
   var qs = set.questions.slice();
@@ -554,10 +569,13 @@ function viewSession(){
       el("button", { class: "grow", text: "다시 듣기", onclick: function(){ speak(q); } }),
       el("button", { class: "btn-primary grow", text: last ? "마지막 — 끝내기" : "다음 질문", onclick: next })
     ]),
-    el("button", { class: "btn-ghost", text: "여기서 종료", onclick: function(){
-      if(confirm("연습을 끝내고 녹음을 저장할까요?")) endSession();
-    }}),
-    el("div", { class: "foot", text: "질문 소리와 답변이 함께 녹음됩니다." })
+    el("div", { class: "row between" }, [
+      el("button", { class: "btn-ghost btn-sm", text: S.opts.showText ? "글자 가리기" : "글자 보기", onclick: function(){ S.opts.showText = !S.opts.showText; render(); } }),
+      el("button", { class: "btn-ghost btn-sm", text: "여기서 종료", onclick: function(){
+        if(confirm("연습을 끝내고 녹음을 저장할까요?")) endSession();
+      }})
+    ]),
+    el("div", { class: "foot", text: "소리가 안 나면 [다시 듣기]를 눌러보세요." })
   ];
 }
 
