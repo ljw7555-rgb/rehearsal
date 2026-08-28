@@ -307,6 +307,19 @@ function speak(text, retry){
   }, 350);
 }
 
+function voiceLine(){
+  if(!window.speechSynthesis) return "이 브라우저는 음성 읽기를 지원하지 않습니다";
+  var vs = speechSynthesis.getVoices() || [];
+  var ko = vs.filter(function(v){ return (v.lang||"").toLowerCase().indexOf("ko") === 0; });
+  return "목소리 " + vs.length + "개 · 한국어 " + (ko.length ? ko.length + "개 (" + ko[0].name + ")" : "없음");
+}
+function voiceReport(){
+  var n = document.getElementById("voicereport");
+  if(!n) return;
+  var st = speechSynthesis.speaking ? "재생 중" : (speechSynthesis.pending ? "대기 중" : "재생 안 함");
+  n.textContent = voiceLine() + " · 상태: " + st;
+}
+
 /* ---------- 연습 세션 ---------- */
 function primeTTS(){
   if(!window.speechSynthesis) return;
@@ -534,6 +547,14 @@ function viewSetup(){
       ]),
       toggleRow("무작위 순서", "실전에 가깝습니다", S.opts.shuffle, function(){ S.opts.shuffle = !S.opts.shuffle; render(); }),
       toggleRow("질문 글자 보기", "끄면 소리만 듣고 답합니다", S.opts.showText, function(){ S.opts.showText = !S.opts.showText; render(); })
+    ]),
+    el("div", { class: "card stack" }, [
+      el("button", { text: "소리 테스트 (녹음 안 켬)", onclick: function(){
+        primeTTS();
+        setTimeout(function(){ speak("들리면 성공입니다. 소리 테스트."); }, 120);
+        setTimeout(voiceReport, 900);
+      }}),
+      el("div", { class: "foot", id: "voicereport", text: voiceLine() })
     ]),
     el("button", { class: "btn-primary btn-big", text: "시작", onclick: startSession }),
     el("div", { class: "foot", text: "마이크 권한을 한 번 물어봅니다. 허용해야 녹음됩니다." })
