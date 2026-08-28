@@ -350,7 +350,7 @@ function startSession(){
       stream.getTracks().forEach(function(t){ t.stop(); });
       finishSession(new Blob(chunks, { type: mr.mimeType || mime || "audio/webm" }));
     };
-    mr.start(1000);
+    mr.start();  /* 토막내면 mp4 컨테이너가 깨진다 — 정지 시 한 덩어리로 받는다 */
     S.ses = {
       set: set.name, qs: qs, i: -1, marks: [], start: Date.now(),
       startDate: new Date(), mr: mr, stream: stream, mime: mr.mimeType || mime
