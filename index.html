@@ -320,6 +320,50 @@ function voiceReport(){
   n.textContent = voiceLine() + " · 상태: " + st;
 }
 
+function micTest(){
+  var out = document.getElementById("mictest");
+  if(!out) return;
+  out.textContent = "";
+  var line = el("div", { class: "foot", text: "마이크 여는 중…" });
+  out.appendChild(line);
+  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } }).then(function(stream){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var ctx = new AC();
+    var an = ctx.createAnalyser(); an.fftSize = 2048;
+    ctx.createMediaStreamSource(stream).connect(an);
+    var buf = new Float32Array(an.fftSize), peak = 0, sum = 0, n = 0;
+    var mime = "";
+    ["audio/mp4","audio/webm;codecs=opus","audio/webm"].forEach(function(m){ if(!mime && window.MediaRecorder && MediaRecorder.isTypeSupported(m)) mime = m; });
+    var mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : {});
+    var chunks = [];
+    mr.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+    var t0 = Date.now();
+    var iv = setInterval(function(){
+      an.getFloatTimeDomainData(buf);
+      var p = 0; for(var i=0;i<buf.length;i++){ var v = Math.abs(buf[i]); if(v > p) p = v; }
+      if(p > peak) peak = p; sum += p; n++;
+      line.textContent = "녹음 중 " + Math.round((Date.now()-t0)/1000) + "초 · 지금 크기 " + Math.round(p*100) + "% · 최대 " + Math.round(peak*100) + "%";
+    }, 200);
+    mr.onstop = function(){
+      clearInterval(iv);
+      stream.getTracks().forEach(function(t){ t.stop(); });
+      ctx.close();
+      var blob = new Blob(chunks, { type: mr.mimeType || mime });
+      var a = el("audio", { controls: "controls" });
+      a.src = URL.createObjectURL(blob);
+      a.addEventListener("loadedmetadata", function(){
+        if(!isFinite(a.duration) || a.duration === 0){ a.currentTime = 1e101; a.ontimeupdate = function(){ a.ontimeupdate = null; a.currentTime = 0; }; }
+      });
+      out.textContent = "";
+      out.appendChild(el("div", { class: "foot", text:
+        "형식 " + (mr.mimeType || mime || "?") + " · " + Math.round(blob.size/1024) + "KB · 최대 " + Math.round(peak*100) + "% · 평균 " + Math.round((n?sum/n:0)*100) + "%" }));
+      out.appendChild(a);
+    };
+    mr.start();
+    setTimeout(function(){ if(mr.state !== "inactive") mr.stop(); }, 10000);
+  }, function(){ line.textContent = "마이크를 열 수 없습니다"; });
+}
+
 /* ---------- 연습 세션 ---------- */
 function primeTTS(){
   if(!window.speechSynthesis) return;
@@ -554,7 +598,9 @@ function viewSetup(){
         setTimeout(function(){ speak("들리면 성공입니다. 소리 테스트."); }, 120);
         setTimeout(voiceReport, 900);
       }}),
-      el("div", { class: "foot", id: "voicereport", text: voiceLine() })
+      el("div", { class: "foot", id: "voicereport", text: voiceLine() }),
+      el("button", { text: "마이크만 10초 테스트", onclick: micTest }),
+      el("div", { id: "mictest", class: "stack" })
     ]),
     el("button", { class: "btn-primary btn-big", text: "시작", onclick: startSession }),
     el("div", { class: "foot", text: "마이크 권한을 한 번 물어봅니다. 허용해야 녹음됩니다." })
