@@ -320,6 +320,25 @@ function formatLine(){
   var ok = PREFS.filter(function(m){ try { return MediaRecorder.isTypeSupported(m); } catch(e){ return false; } });
   return "쓸 수 있는 형식: " + (ok.length ? ok.join(" / ") : "없음");
 }
+function openMic(){
+  var CONS = { audio: { echoCancellation: false, noiseSuppression: true } };
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    return Promise.reject({ name: "Unsupported", message: "이 브라우저는 마이크를 지원하지 않습니다" });
+  }
+  return new Promise(function(res, rej){
+    var done = false;
+    var t = setTimeout(function(){
+      if(done) return; done = true;
+      rej({ name: "TimeoutError", message: "응답이 없습니다 — 브라우저를 완전히 종료한 뒤 다시 열어주세요" });
+    }, 10000);
+    navigator.mediaDevices.getUserMedia(CONS).then(function(st){
+      if(done){ st.getTracks().forEach(function(x){ x.stop(); }); return; }
+      done = true; clearTimeout(t); res(st);
+    }, function(e){
+      if(done) return; done = true; clearTimeout(t); rej(e);
+    });
+  });
+}
 function boost(stream, mult){
   var AC = window.AudioContext || window.webkitAudioContext;
   if(!AC || !mult || mult <= 1) return { stream: stream, ctx: null };
@@ -355,7 +374,7 @@ function micTest(){
   out.textContent = "";
   var line = el("div", { class: "foot", text: "마이크 여는 중…" });
   out.appendChild(line);
-  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } }).then(function(stream){
+  openMic().then(function(stream){
     var AC = window.AudioContext || window.webkitAudioContext;
     var ctx = new AC();
     if(ctx.state === "suspended" && ctx.resume) ctx.resume();
@@ -417,7 +436,7 @@ function startSession(){
   if(S.opts.shuffle) for(var i=qs.length-1;i>0;i--){ var j = Math.floor(Math.random()*(i+1)); var t = qs[i]; qs[i] = qs[j]; qs[j] = t; }
   if(S.opts.count > 0) qs = qs.slice(0, S.opts.count);
 
-  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } }).then(function(stream){
+  openMic().then(function(stream){
     var mime = "";
     for(var k=0;k<PREFS.length;k++){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(PREFS[k])){ mime = PREFS[k]; break; } }
     var amp = boost(stream, S.opts.gain);
