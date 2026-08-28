@@ -611,7 +611,15 @@ function viewArchive(){
     if(open){
       var audio = el("audio", { controls: "controls", preload: "metadata" });
       audio.src = URL.createObjectURL(r.blob);
+      /* 브라우저 녹음 파일은 길이 정보가 비어 있는 경우가 있다 — 한 번 끝까지 훑어 길이를 잡는다 */
+      audio.addEventListener("loadedmetadata", function(){
+        if(audio.duration === Infinity || isNaN(audio.duration)){
+          audio.currentTime = 1e101;
+          audio.ontimeupdate = function(){ audio.ontimeupdate = null; audio.currentTime = 0; };
+        }
+      });
       kids.push(audio);
+      kids.push(el("div", { class: "foot", text: "녹음 길이 " + clock(r.seconds) + " · " + Math.round(r.size/1024) + "KB" }));
       if(r.marks && r.marks.length){
         kids.push(el("div", { class: "marks" }, r.marks.map(function(m){
           return el("button", { class: "mark", onclick: function(){ audio.currentTime = m.t; audio.play(); } }, [
