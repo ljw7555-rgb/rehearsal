@@ -393,7 +393,9 @@ function micTest(){
     };
     mr.start();
     setTimeout(function(){ if(mr.state !== "inactive") mr.stop(); }, 10000);
-  }, function(){ line.textContent = "마이크를 열 수 없습니다"; });
+  }, function(e){
+    line.textContent = "마이크 실패 [" + ((e && e.name) || "?") + "] " + ((e && e.message) || "");
+  });
 }
 
 /* ---------- 연습 세션 ---------- */
@@ -435,8 +437,14 @@ function startSession(){
     S.view = "session";
     tick();
     next();
-  }).catch(function(){
-    toast("마이크를 사용할 수 없습니다. 권한을 확인해 주세요", true);
+  }).catch(function(e){
+    var n = (e && e.name) || "알 수 없음";
+    var why = n === "NotAllowedError" ? "권한이 거부됐습니다 (자물쇠 → 권한 → 마이크 허용)"
+            : n === "NotReadableError" ? "다른 앱·탭이 마이크를 쓰고 있습니다 (브라우저 완전 종료 후 재시도)"
+            : n === "NotFoundError" ? "마이크를 찾지 못했습니다"
+            : n === "AbortError" ? "마이크가 갑자기 끊겼습니다"
+            : ((e && e.message) || "");
+    toast("마이크 실패 [" + n + "] " + why, true);
   });
 }
 var timer = null;
