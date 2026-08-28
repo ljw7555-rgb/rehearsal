@@ -151,7 +151,7 @@ var FONTS = "https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&
 var DATA = null, KEY = null, SALT = null;
 var S = {
   view: "home", setId: null, dirty: false, saving: false,
-  opts: { count: 0, shuffle: true, showText: false },
+  opts: { count: 0, shuffle: true, showText: false, gain: 6 },
   ses: null,          // 진행 중 세션
   recs: [], openRec: null, quota: null,
   cap: { artifact: undefined, downloads: undefined }, // undefined=확인중
@@ -320,6 +320,22 @@ function formatLine(){
   var ok = PREFS.filter(function(m){ try { return MediaRecorder.isTypeSupported(m); } catch(e){ return false; } });
   return "쓸 수 있는 형식: " + (ok.length ? ok.join(" / ") : "없음");
 }
+function boost(stream, mult){
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC || !mult || mult <= 1) return { stream: stream, ctx: null };
+  try {
+    var ctx = new AC();
+    if(ctx.state === "suspended" && ctx.resume) ctx.resume();
+    var src = ctx.createMediaStreamSource(stream);
+    var g = ctx.createGain(); g.gain.value = mult;
+    var lim = ctx.createDynamicsCompressor();
+    lim.threshold.value = -6; lim.knee.value = 3; lim.ratio.value = 12;
+    lim.attack.value = 0.003; lim.release.value = 0.25;
+    var dest = ctx.createMediaStreamDestination();
+    src.connect(g); g.connect(lim); lim.connect(dest);
+    return { stream: dest.stream, ctx: ctx };
+  } catch(e){ return { stream: stream, ctx: null }; }
+}
 function voiceLine(){
   if(!window.speechSynthesis) return "이 브라우저는 음성 읽기를 지원하지 않습니다";
   var vs = speechSynthesis.getVoices() || [];
@@ -344,11 +360,12 @@ function micTest(){
     var ctx = new AC();
     if(ctx.state === "suspended" && ctx.resume) ctx.resume();
     var an = ctx.createAnalyser(); an.fftSize = 2048;
-    ctx.createMediaStreamSource(stream).connect(an);
+    ctx.createMediaStreamSource(amp.stream).connect(an);
     var buf = new Float32Array(an.fftSize), peak = 0, sum = 0, n = 0;
     var mime = "";
     PREFS.forEach(function(m){ if(!mime && window.MediaRecorder && MediaRecorder.isTypeSupported(m)) mime = m; });
-    var mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : {});
+    var amp = boost(stream, S.opts.gain);
+    var mr = new MediaRecorder(amp.stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : {});
     var chunks = [];
     mr.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
     var t0 = Date.now();
@@ -362,6 +379,7 @@ function micTest(){
       clearInterval(iv);
       stream.getTracks().forEach(function(t){ t.stop(); });
       ctx.close();
+      if(amp.ctx) try { amp.ctx.close(); } catch(e){}
       var blob = new Blob(chunks, { type: mr.mimeType || mime });
       var a = el("audio", { controls: "controls" });
       a.src = URL.createObjectURL(blob);
@@ -400,12 +418,14 @@ function startSession(){
   navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } }).then(function(stream){
     var mime = "";
     for(var k=0;k<PREFS.length;k++){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(PREFS[k])){ mime = PREFS[k]; break; } }
-    var mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 });
+    var amp = boost(stream, S.opts.gain);
+    var mr = new MediaRecorder(amp.stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 });
     var chunks = [];
     mr.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
     mr.onstop = function(){
       stream.getTracks().forEach(function(t){ t.stop(); });
-      finishSession(new Blob(chunks, { type: mr.mimeType || mime || "audio/webm" }));
+      if(amp.ctx) try { amp.ctx.close(); } catch(e){}
+      finishSession(new Blob(chunks, { type: mr.mimeType || mime || "audio/mp4" }));
     };
     mr.start();  /* 토막내면 mp4 컨테이너가 깨진다 — 정지 시 한 덩어리로 받는다 */
     S.ses = {
@@ -603,7 +623,19 @@ function viewSetup(){
         sel
       ]),
       toggleRow("무작위 순서", "실전에 가깝습니다", S.opts.shuffle, function(){ S.opts.shuffle = !S.opts.shuffle; render(); }),
-      toggleRow("질문 글자 보기", "끄면 소리만 듣고 답합니다", S.opts.showText, function(){ S.opts.showText = !S.opts.showText; render(); })
+      toggleRow("질문 글자 보기", "끄면 소리만 듣고 답합니다", S.opts.showText, function(){ S.opts.showText = !S.opts.showText; render(); }),
+      (function(){
+        var g = el("select", { onchange: function(e){ S.opts.gain = parseInt(e.target.value, 10); render(); } });
+        [[1,"안 키움"],[3,"조금 (3배)"],[6,"보통 (6배)"],[10,"크게 (10배)"],[16,"아주 크게 (16배)"]].forEach(function(o){
+          var op = el("option", { value: o[0], text: o[1] });
+          if(o[0] === S.opts.gain) op.selected = true;
+          g.appendChild(op);
+        });
+        return el("div", { class: "toggle" }, [
+          el("div", { class: "toggle-label" }, [ el("span", { text: "녹음 소리 키우기" }), el("small", { text: "작게 들리면 한 단계씩 올려보세요" }) ]),
+          g
+        ]);
+      })()
     ]),
     el("div", { class: "card stack" }, [
       el("button", { text: "소리 테스트 (녹음 안 켬)", onclick: function(){
