@@ -307,6 +307,19 @@ function speak(text, retry){
   }, 350);
 }
 
+var PREFS = [
+  "audio/mp4;codecs=mp4a.40.2",   /* AAC — 카톡·아이폰에서 열리는 형식 */
+  "audio/mp4;codecs=aac",
+  "audio/aac",
+  "audio/mp4",
+  "audio/webm;codecs=opus",
+  "audio/webm"
+];
+function formatLine(){
+  if(!window.MediaRecorder) return "이 브라우저는 녹음을 지원하지 않습니다";
+  var ok = PREFS.filter(function(m){ try { return MediaRecorder.isTypeSupported(m); } catch(e){ return false; } });
+  return "쓸 수 있는 형식: " + (ok.length ? ok.join(" / ") : "없음");
+}
 function voiceLine(){
   if(!window.speechSynthesis) return "이 브라우저는 음성 읽기를 지원하지 않습니다";
   var vs = speechSynthesis.getVoices() || [];
@@ -329,11 +342,12 @@ function micTest(){
   navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } }).then(function(stream){
     var AC = window.AudioContext || window.webkitAudioContext;
     var ctx = new AC();
+    if(ctx.state === "suspended" && ctx.resume) ctx.resume();
     var an = ctx.createAnalyser(); an.fftSize = 2048;
     ctx.createMediaStreamSource(stream).connect(an);
     var buf = new Float32Array(an.fftSize), peak = 0, sum = 0, n = 0;
     var mime = "";
-    ["audio/mp4","audio/webm;codecs=opus","audio/webm"].forEach(function(m){ if(!mime && window.MediaRecorder && MediaRecorder.isTypeSupported(m)) mime = m; });
+    PREFS.forEach(function(m){ if(!mime && window.MediaRecorder && MediaRecorder.isTypeSupported(m)) mime = m; });
     var mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : {});
     var chunks = [];
     mr.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
@@ -385,8 +399,7 @@ function startSession(){
 
   navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true } }).then(function(stream){
     var mime = "";
-    var prefs = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"];
-    for(var k=0;k<prefs.length;k++){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(prefs[k])){ mime = prefs[k]; break; } }
+    for(var k=0;k<PREFS.length;k++){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(PREFS[k])){ mime = PREFS[k]; break; } }
     var mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 });
     var chunks = [];
     mr.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
@@ -599,6 +612,7 @@ function viewSetup(){
         setTimeout(voiceReport, 900);
       }}),
       el("div", { class: "foot", id: "voicereport", text: voiceLine() }),
+      el("div", { class: "foot", text: formatLine() }),
       el("button", { text: "마이크만 10초 테스트", onclick: micTest }),
       el("div", { id: "mictest", class: "stack" })
     ]),
