@@ -151,7 +151,7 @@ var FONTS = "https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&
 var DATA = null, KEY = null, SALT = null;
 var S = {
   view: "home", setId: null, dirty: false, saving: false,
-  opts: { count: 0, shuffle: true, showText: false, gain: 6 },
+  opts: { count: 0, shuffle: true, showText: false, gain: 16 },
   ses: null,          // 진행 중 세션
   recs: [], openRec: null, quota: null,
   cap: { artifact: undefined, downloads: undefined }, // undefined=확인중
@@ -665,7 +665,7 @@ function viewSetup(){
       toggleRow("질문 글자 보기", "끄면 소리만 듣고 답합니다", S.opts.showText, function(){ S.opts.showText = !S.opts.showText; render(); }),
       (function(){
         var g = el("select", { onchange: function(e){ S.opts.gain = parseInt(e.target.value, 10); render(); } });
-        [[1,"안 키움"],[3,"조금 (3배)"],[6,"보통 (6배)"],[10,"크게 (10배)"],[16,"아주 크게 (16배)"]].forEach(function(o){
+        [[1,"안 키움"],[3,"조금 (3배)"],[6,"보통 (6배)"],[10,"크게 (10배)"],[16,"아주 크게 (16배)"],[24,"최대 (24배)"]].forEach(function(o){
           var op = el("option", { value: o[0], text: o[1] });
           if(o[0] === S.opts.gain) op.selected = true;
           g.appendChild(op);
