@@ -777,6 +777,7 @@ function viewArchive(){
   return [
     el("button", { class: "btn-ghost", text: "← 기관 목록", onclick: function(){ S.view = "home"; S.openRec = null; render(); } }),
     h("녹음 보관함", S.recs.length ? S.recs.length + "개" + (used ? " · " + used + " 사용 중" : "") : null),
+    S.recs.length > 1 ? el("button", { id: "saveall", class: "btn-primary", text: "전체 저장 (" + S.recs.length + "개)", onclick: saveAll }) : null,
     el("div", { class: "setlist" }, items),
     S.recs.length ? el("div", { class: "notice warn", text: "여기 녹음은 이 브라우저 안에만 있습니다. 크롬에서 사이트 데이터를 지우면 사라집니다. 남길 것은 폰에 저장해 두세요." }) : null
   ];
@@ -795,13 +796,37 @@ function shareRec(r){
     toast("공유하지 못했습니다: " + ((e && e.message) || "알 수 없음"), true);
   });
 }
+function downloadBlob(name, blob){
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = name; a.rel = "noopener";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 15000);
+}
+function saveAll(){
+  var list = S.recs.slice();
+  if(!list.length) return;
+  var i = 0, done = 0, failed = 0;
+  function step(){
+    if(i >= list.length){
+      toast(done + "개 저장을 시작했습니다" + (failed ? " (실패 " + failed + "개)" : "") + ". 다운로드 알림을 확인하세요", failed > 0);
+      return;
+    }
+    var r = list[i++];
+    try { downloadBlob(r.name, r.blob); done++; }
+    catch(e){ failed++; }
+    var n = document.getElementById("saveall");
+    if(n) n.textContent = "저장 중… " + i + "/" + list.length;
+    /* WHY: 브라우저가 연속 다운로드를 한꺼번에 받으면 뒤쪽을 버린다 — 큐에 들어갈 간격이 필요하다 */
+    setTimeout(step, 800);
+  }
+  var n = document.getElementById("saveall");
+  if(n) n.textContent = "저장 중… 0/" + list.length;
+  step();
+}
 function saveToPhone(r){
   try {
-    var url = URL.createObjectURL(r.blob);
-    var a = document.createElement("a");
-    a.href = url; a.download = r.name; a.rel = "noopener";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 15000);
+    downloadBlob(r.name, r.blob);
     toast("저장을 시작했습니다. 다운로드 알림을 확인하세요");
   } catch(e){
     toast("저장 실패: " + ((e && e.message) || "알 수 없음") + " — [공유]를 써보세요", true);
