@@ -777,7 +777,10 @@ function viewArchive(){
   return [
     el("button", { class: "btn-ghost", text: "← 기관 목록", onclick: function(){ S.view = "home"; S.openRec = null; render(); } }),
     h("녹음 보관함", S.recs.length ? S.recs.length + "개" + (used ? " · " + used + " 사용 중" : "") : null),
-    S.recs.length > 1 ? el("button", { id: "saveall", class: "btn-primary", text: "전체 저장 (" + S.recs.length + "개)", onclick: saveAll }) : null,
+    S.recs.length ? el("div", { class: "row" }, [
+      S.recs.length > 1 ? el("button", { id: "saveall", class: "btn-primary grow", text: "전체 저장 (" + S.recs.length + "개)", onclick: saveAll }) : null,
+      el("button", { class: "btn-danger", text: "전체 삭제", onclick: deleteAll })
+    ]) : null,
     el("div", { class: "setlist" }, items),
     S.recs.length ? el("div", { class: "notice warn", text: "여기 녹음은 이 브라우저 안에만 있습니다. 크롬에서 사이트 데이터를 지우면 사라집니다. 남길 것은 폰에 저장해 두세요." }) : null
   ];
@@ -802,6 +805,14 @@ function downloadBlob(name, blob){
   a.href = url; a.download = name; a.rel = "noopener";
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(function(){ URL.revokeObjectURL(url); }, 15000);
+}
+function deleteAll(){
+  var n = S.recs.length;
+  if(!n) return;
+  if(!confirm("녹음 " + n + "개를 모두 지울까요?\n되돌릴 수 없습니다.")) return;
+  tx("readwrite", function(st){ st.clear(); }).then(loadRecs).then(function(){
+    S.openRec = null; render(); toast(n + "개를 지웠습니다");
+  }, function(){ toast("삭제하지 못했습니다", true); });
 }
 function saveAll(){
   var list = S.recs.slice();
