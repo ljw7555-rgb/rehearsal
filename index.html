@@ -778,7 +778,7 @@ function viewArchive(){
     el("button", { class: "btn-ghost", text: "← 기관 목록", onclick: function(){ S.view = "home"; S.openRec = null; render(); } }),
     h("녹음 보관함", S.recs.length ? S.recs.length + "개" + (used ? " · " + used + " 사용 중" : "") : null),
     S.recs.length ? el("div", { class: "row" }, [
-      S.recs.length > 1 ? el("button", { id: "saveall", class: "btn-primary grow", text: "전체 저장 (" + S.recs.length + "개)", onclick: saveAll }) : null,
+      S.recs.length > 1 ? el("button", { id: "saveall", class: "btn-primary grow", text: "전체 저장 — 압축 (" + S.recs.length + "개)", onclick: saveAll }) : null,
       el("button", { class: "btn-danger", text: "전체 삭제", onclick: deleteAll })
     ]) : null,
     el("div", { class: "setlist" }, items),
@@ -799,6 +799,64 @@ function shareRec(r){
     toast("공유하지 못했습니다: " + ((e && e.message) || "알 수 없음"), true);
   });
 }
+function crc32(buf){
+  var t = crc32.t;
+  if(!t){
+    t = crc32.t = new Uint32Array(256);
+    for(var i=0;i<256;i++){
+      var c = i;
+      for(var k=0;k<8;k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[i] = c >>> 0;
+    }
+  }
+  var c = 0xFFFFFFFF;
+  for(var i=0;i<buf.length;i++) c = t[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+/* 압축 없이 담기만 하는 ZIP(store) — 오디오는 이미 압축돼 있어 다시 줄지 않는다 */
+function makeZip(entries){
+  var enc = new TextEncoder();
+  return Promise.all(entries.map(function(e){
+    return e.blob.arrayBuffer().then(function(ab){
+      var d = new Uint8Array(ab);
+      return { name: enc.encode(e.name), data: d, crc: crc32(d) };
+    });
+  })).then(function(items){
+    var parts = [], central = [], offset = 0;
+    items.forEach(function(it){
+      var lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true);
+      lh.setUint16(4, 20, true);
+      lh.setUint16(6, 0x0800, true);   /* 파일명 UTF-8 */
+      lh.setUint32(14, it.crc, true);
+      lh.setUint32(18, it.data.length, true);
+      lh.setUint32(22, it.data.length, true);
+      lh.setUint16(26, it.name.length, true);
+      parts.push(new Uint8Array(lh.buffer), it.name, it.data);
+
+      var ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true);
+      ch.setUint16(4, 20, true);
+      ch.setUint16(6, 20, true);
+      ch.setUint16(8, 0x0800, true);
+      ch.setUint32(16, it.crc, true);
+      ch.setUint32(20, it.data.length, true);
+      ch.setUint32(24, it.data.length, true);
+      ch.setUint16(28, it.name.length, true);
+      ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), it.name);
+      offset += 30 + it.name.length + it.data.length;
+    });
+    var cdSize = central.reduce(function(a, b){ return a + b.length; }, 0);
+    var eo = new DataView(new ArrayBuffer(22));
+    eo.setUint32(0, 0x06054b50, true);
+    eo.setUint16(8, items.length, true);
+    eo.setUint16(10, items.length, true);
+    eo.setUint32(12, cdSize, true);
+    eo.setUint32(16, offset, true);
+    return new Blob(parts.concat(central, [new Uint8Array(eo.buffer)]), { type: "application/zip" });
+  });
+}
 function downloadBlob(name, blob){
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
@@ -817,23 +875,18 @@ function deleteAll(){
 function saveAll(){
   var list = S.recs.slice();
   if(!list.length) return;
-  var i = 0, done = 0, failed = 0;
-  function step(){
-    if(i >= list.length){
-      toast(done + "개 저장을 시작했습니다" + (failed ? " (실패 " + failed + "개)" : "") + ". 다운로드 알림을 확인하세요", failed > 0);
-      return;
-    }
-    var r = list[i++];
-    try { downloadBlob(r.name, r.blob); done++; }
-    catch(e){ failed++; }
-    var n = document.getElementById("saveall");
-    if(n) n.textContent = "저장 중… " + i + "/" + list.length;
-    /* WHY: 브라우저가 연속 다운로드를 한꺼번에 받으면 뒤쪽을 버린다 — 큐에 들어갈 간격이 필요하다 */
-    setTimeout(step, 800);
-  }
-  var n = document.getElementById("saveall");
-  if(n) n.textContent = "저장 중… 0/" + list.length;
-  step();
+  var btn = document.getElementById("saveall");
+  if(btn){ btn.textContent = "묶는 중… (" + list.length + "개)"; btn.disabled = true; }
+  var d = new Date(list[0].start);
+  var zipName = "연습녹음-" + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + "-" + list.length + "개.zip";
+  makeZip(list.map(function(r){ return { name: r.name, blob: r.blob }; })).then(function(zip){
+    downloadBlob(zipName, zip);
+    toast(list.length + "개를 " + zipName + " 하나로 저장했습니다");
+    render();
+  }, function(e){
+    toast("묶지 못했습니다: " + ((e && e.message) || "알 수 없음"), true);
+    render();
+  });
 }
 function saveToPhone(r){
   try {
