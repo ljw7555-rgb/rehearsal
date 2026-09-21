@@ -111,6 +111,11 @@ select{background:var(--surface);border:1px solid var(--line);border-radius:10px
 
 .stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px 20px;min-height:220px;display:flex;flex-direction:column;justify-content:center;gap:16px;box-shadow:var(--shadow)}
 .qbig{font-family:"Gowun Batang",serif;font-size:25px;line-height:1.5;text-wrap:balance}
+.answer{background:var(--accent-soft);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.answer-label{font-size:12px;letter-spacing:.12em;color:var(--accent);font-weight:600}
+.answer-main{font-size:16px;line-height:1.65}
+.answer-more{font-size:14px;line-height:1.6;color:var(--muted);display:flex;gap:8px;align-items:baseline}
+.answer-tag{flex-shrink:0;font-size:11px;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--muted)}
 .qhidden{color:var(--muted);text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
 .qhidden .dot-big{font-family:"IBM Plex Mono",monospace;font-size:44px;color:var(--accent)}
 
@@ -139,7 +144,7 @@ select{background:var(--surface);border:1px solid var(--line);border-radius:10px
 <body>
 <div id="root"></div>
 
-<script id="vault" type="application/json">{"s":"4QjQTHDYtqNWBelnFbJJRA==","i":"XrM2fcKDsHv42BqH","c":"Sdb+bGxSyIgbDsxmkKJZmaGSlhdphOgn6+7edx2xdWVxvtiJOP8/bQY/OSBTJyZ/R+iscjcnXY0bD6OIpneWmb4sNTaqZGh80iOfBt7y03ZDjBQBykyehXwG7lE55NIckeSCyOTzkyfuOgMnuOpal28QCoI3qw2jqnohXU+F4DMG6ACO1BDMl9FfHBgK4iLxPZDa/WqN3q9ufeMOB+HRoGbqFyvEqlWrO2ojPV/BlTV9rd53D1USLcX2wxw3vZj2RkjQXHJWKUjD2p2Re/exWzZAScp3+Zb8WTfm2gHV9vOYiZcuRiB0nm9j0yPhddK/gKxZ/p9YZYIfqjAXH07+/WLgAZ6UHZON6DzfB9ZNDLR2Z+bPmAuo1SmIVYt7ZbdJyRRKba2lugMl1MNRBiY8FgxqxmgKMFJnlGX2rHggzD1mSb5yGu6CIz3R3flnMR0H4qwgoKjHeIzOZOMtuXP/kcNBxh248RtLYMTuM7Yd4xYs+SXSBmojNl9Ax0d1UGqvrOxQuSBOyGxaBpZS5gkVOiunMmkmBtpWFxvyU6doimpdULE/b/EchUIo5BaJlG+um1W0TdOVoFBy1uDrqETEq5xHA8LH+f/crrhjXW3RKertzvM+W67VWcTqzhpSQEQm9GnG4+BB7zejG2fowvWLs0PmMnEIOnXRJ2CCV4syQVD5k/71cKaJKqvZkyxfI+bk/S7Nz9p5acZWbV9anhFwThtmdebNtl/Do7wOoBpM53nYdX46uSYxmq13LY/zwTt6gtERNH7vV1eusyEraRyxU5WJkt6SJBL2zvm/CTNR/5ij0pwTjI7kHC8Z28Rjl5sV9pn6fv5LGC1D02A9ecGANjPEDP3OpbY3Tc12eyk4AlUX5vC0nEX4fAydEOGTJH4GTwg0XCkaxCjduwdqUmNwGHpo0wQShetuEni0CAFjXhMmOczLtDE+OgXFh/zHqRJQyWyrrgSnuNo+6UOAD1B5EG4qfXcOL3yAhnBgJuiTcg1UCBSO1oSCvVXsdR6bF81Y/m6pF51O1missvH1KO1BD2M5C7Lc9crwVjY/p5028Ivl0lISyP6JZgsmjac1fDw8TzeO+8Fib2UNSA6/aS/T0Cik22b3jalehWkY23z0fQwZIPyTbVhlFqCFu3ctEBMUY3uWH2ZVE7nf2Q9QN3Gi9/5tImx+ztqZQaUQkqeE4hiXwUlAVk7YVHeZ10KFenObkGvxHacYa1uwxmmw7eO0PyIJxTiVrV0="}</script>
+<script id="vault" type="application/json">{"s":"p/X4LbCakJ3h5S/ea5sLKA==","i":"k3uMN0hq6nnr03dN","c":"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"}</script>
 
 <script id="src">
 (function(){
@@ -151,7 +156,7 @@ var FONTS = "https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&
 var DATA = null, KEY = null, SALT = null;
 var S = {
   view: "home", setId: null, dirty: false, saving: false,
-  opts: { count: 0, shuffle: true, showText: false, gain: 16 },
+  opts: { count: 0, shuffle: true, showText: false, showAnswer: true, gain: 16 },
   ses: null,          // 진행 중 세션
   recs: [], openRec: null, quota: null,
   cap: { artifact: undefined, downloads: undefined }, // undefined=확인중
@@ -456,7 +461,7 @@ function startSession(){
     };
     mr.start();  /* 토막내면 mp4 컨테이너가 깨진다 — 정지 시 한 덩어리로 받는다 */
     S.ses = {
-      set: set.name, qs: qs, i: -1, marks: [], start: Date.now(),
+      set: set.name, qs: qs, answers: set.answers || null, i: -1, marks: [], start: Date.now(),
       startDate: new Date(), mr: mr, stream: stream, mime: mr.mimeType || mime
     };
     S.view = "session";
@@ -663,6 +668,7 @@ function viewSetup(){
       ]),
       toggleRow("무작위 순서", "실전에 가깝습니다", S.opts.shuffle, function(){ S.opts.shuffle = !S.opts.shuffle; render(); }),
       toggleRow("질문 글자 보기", "끄면 소리만 듣고 답합니다", S.opts.showText, function(){ S.opts.showText = !S.opts.showText; render(); }),
+      set.answers ? toggleRow("준비한 답 보기", "질문 아래에 대본 답변을 띄웁니다", S.opts.showAnswer, function(){ S.opts.showAnswer = !S.opts.showAnswer; render(); }) : null,
       (function(){
         var g = el("select", { onchange: function(e){ S.opts.gain = parseInt(e.target.value, 10); render(); } });
         [[1,"안 키움"],[3,"조금 (3배)"],[6,"보통 (6배)"],[10,"크게 (10배)"],[16,"아주 크게 (16배)"],[24,"최대 (24배)"]].forEach(function(o){
@@ -717,6 +723,14 @@ function viewSession(){
       el("span", { class: "mono", style: "font-size:13px;color:var(--muted)", text: (s.i+1) + "/" + s.qs.length })
     ]),
     stage,
+    (S.opts.showAnswer && s.answers && s.answers[q]) ? el("div", { class: "answer" }, [
+      el("div", { class: "answer-label", text: "준비한 답" }),
+      el("div", { class: "answer-main", text: s.answers[q].a }),
+      s.answers[q].more ? el("div", { class: "answer-more" }, [
+        el("span", { class: "answer-tag", text: "더 물으면" }),
+        el("span", { text: s.answers[q].more })
+      ]) : null
+    ]) : null,
     el("div", { class: "row" }, [
       el("button", { class: "grow", text: "다시 듣기", onclick: function(){ speak(q); } }),
       el("button", { class: "btn-primary grow", text: last ? "마지막 — 끝내기" : "다음 질문", onclick: next })
